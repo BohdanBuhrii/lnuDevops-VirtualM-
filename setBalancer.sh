@@ -1,12 +1,51 @@
 #!/bin/bash
 
-echo 'Starting Provision: lnu1810devops_3'
+service nginx start
+
+#Settings for nginx
+echo 'Starting Provision: balancer'
 sudo service nginx stop
-sudo rm /etc/nginx/nginx.conf #!!!!!!!!!!!!!!!!!!
-sudo ls -s /etc/nginx/sites-enabled/default #
+sudo rm -rf /etc/nginx/nginx.conf
+sudo touch /etc/nginx/nginx.conf
+
+echo "
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';#
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile            on;
+    tcp_nopush          on;
+    tcp_nodelay         on;
+    keepalive_timeout   65;
+    types_hash_max_size 2048;
+
+    include             /etc/nginx/mime.types;
+    default_type        application/octet-stream;
+
+    include /etc/nginx/conf.d/*.conf;
+}" >> /etc/nginx/nginx.conf 
+
+#settings for load-balancer
+sudo rm -rf /etc/nginx/conf.d/load-balancer.conf
+sudo touch /etc/nginx/conf.d/load-balancer.conf
+
 echo "upstream testapp {
-        server 1.168.33.101;
-        server 1.168.33.102;
+        server 1.168.1.101;
+        server 1.168.1.102;
 }
 
 server {
@@ -22,7 +61,7 @@ server {
         location / {
                 proxy_pass http://testapp;
         }
-}" >> /etc/nginx/sites-enabled/default #
+}" >> /etc/nginx/conf.d/load-balancer.conf
 sudo service nginx start
-echo "Machine: lb1" >> /usr/share/nginx/html/index.html
-echo 'Provision lb1 complete'
+echo "Machine: lnu1810devops_3" >> /usr/share/nginx/html/index.html
+echo 'Provision balancer complete'
